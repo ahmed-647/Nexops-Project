@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: jenkins-server
+  name: nexops-jenkins-master
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins-server
+  template:
+    metadata:
+      labels:
+        app: jenkins-server
+    spec:
+      securityContext:
+        fsGroup: 0
+        runAsUser: 0
+      containers:
+      - image: jenkins/jenkins:lts-jdk17
+        imagePullPolicy: IfNotPresent
+        name: jenkins
+        securityContext:
+          privileged: true
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        - containerPort: 50000
+          name: agent-port
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1500Mi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /var/jenkins_home
+          name: jenkins-home-volume
+        - mountPath: /run/k3s/containerd/containerd.sock
+          name: docker-sock
+      volumes:
+      - name: jenkins-home-volume
+        persistentVolumeClaim:
+          claimName: jenkins-storage-pvc
+      - name: docker-sock
+        hostPath:
+          path: /run/k3s/containerd/containerd.sock
+          type: Socket
